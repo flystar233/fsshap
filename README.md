@@ -4,13 +4,13 @@ R Package for Feature Selection Based on SHAP Values and Statistical Significanc
 
 ## Introduction
 
-`shapselect` is an R package for feature selection based on SHAP (SHapley Additive exPlanations) values and statistical significance testing. The package supports regression, binary classification, and multiclass classification tasks, using iterative feature reduction methods to identify statistically significant features.
+`fs_shap` is an R package for feature selection based on SHAP (SHapley Additive exPlanations) values and statistical significance testing. The package supports regression, binary classification, and multiclass classification tasks, using iterative feature reduction methods to identify statistically significant features.
 
 ## Installation
 
 ```r
 # Install from GitHub
-devtools::install_github("flystar233/fs_shep")
+devtools::install_github("flystar233/fs_shap")
 ```
 
 ## Main Features
