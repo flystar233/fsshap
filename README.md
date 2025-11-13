@@ -10,7 +10,7 @@ R Package for Feature Selection Based on SHAP Values and Statistical Significanc
 
 ```r
 # Install from GitHub
-devtools::install_github("flystar233/fs_shep")
+devtools::install_github("flystar233/fs_shap")
 ```
 
 ## Main Features
