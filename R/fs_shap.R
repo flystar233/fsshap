@@ -1,4 +1,4 @@
-#' SHAP Select - Main Feature Selection Function
+#' FS-SHAP - Main Feature Selection Function
 #'
 #' Select features based on SHAP values and statistical significance
 #'
@@ -35,7 +35,7 @@
 #' )
 #'
 #' # For feature selection, use original data frame
-#' result <- shap_select(
+#' result <- fs_shap(
 #'   model,
 #'   X_matrix,
 #'   y,
@@ -44,7 +44,7 @@
 #' print(result)
 #' }
 #'
-shap_select <- function(model,
+fs_shap <- function(model,
                         x,
                         y,
                         feature_names = NULL,

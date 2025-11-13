@@ -40,7 +40,7 @@ model <- xgboost(
 )
 
 # Feature selection
-result <- shap_select(
+result <- fs_shap(
   model = model,
   x = X_matrix,
   y = y,

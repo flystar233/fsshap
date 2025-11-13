@@ -9,13 +9,13 @@ R Package for Feature Selection Based on SHAP Values and Statistical Significanc
 ## Installation
 
 ```r
-# Install from local path
-devtools::install("flystar233/shapselect")
+# Install from GitHub
+devtools::install_github("flystar233/fs_shep")
 ```
 
 ## Main Features
 
-- **shap_select()**: Main function for feature selection based on SHAP values and statistical significance
+- **fs_shap()**: Main function for feature selection based on SHAP values and statistical significance
 - Supports regression, binary classification, and multiclass tasks
 - Automatic task type detection
 - Iterative feature reduction algorithm
@@ -46,7 +46,7 @@ model <- xgboost::xgboost(
 )
 
 # Feature selection
-result <- shap_select(
+result <- fs_shap(
   model = model,
   x = X_matrix,
   y = y,
