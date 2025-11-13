@@ -1,4 +1,4 @@
-# shapselect
+# fsshap
 
 R Package for Feature Selection Based on SHAP Values and Statistical Significance
 
