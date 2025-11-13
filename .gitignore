@@ -1,0 +1,19 @@
+# R
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+*.Rproj
+.Rproj.user/
+
+# Build
+*.tar.gz
+*.zip
+
+# Documentation
+*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+

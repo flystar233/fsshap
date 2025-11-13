@@ -1,0 +1,23 @@
+Package: shapselect
+Type: Package
+Title: SHAP-Based Feature Selection with Statistical Significance
+Version: 0.1.0
+Author: Your Name
+Maintainer: Your Name <your.email@example.com>
+Description: A package for feature selection based on SHAP (SHapley Additive exPlanations) 
+    values and statistical significance testing. Supports regression, binary classification, 
+    and multiclass classification tasks. Uses iterative feature reduction to identify 
+    statistically significant features.
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports:
+    fastshap,
+    data.table,
+    stats
+Suggests:
+    xgboost,
+    testthat,
+    knitr,
+    rmarkdown
+RoxygenNote: 7.3.2
