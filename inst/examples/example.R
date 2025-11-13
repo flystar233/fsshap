@@ -35,7 +35,7 @@ model <- xgboost::xgboost(
 
 # Feature selection
 cat("Performing feature selection...\n")
-result <- fs_shap(
+result <- fsshap(
   model = model,
   x = X_matrix,
   y = y,
@@ -56,7 +56,7 @@ print(selected_features)
 cat("\n\nExample 2: Return Extended Data\n")
 cat("====================\n\n")
 
-result_extended <- fs_shap(
+result_extended <- fsshap(
   model = model,
   x = X_matrix,
   y = y,

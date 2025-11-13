@@ -1,9 +1,9 @@
-Package: fs_shap
+Package: fsshap
 Type: Package
 Title: SHAP-Based Feature Selection with Statistical Significance
 Version: 0.1.0
 Author: lcuian
-Maintainer: flystar233@gmail.com
+Maintainer: lcuian <flystar233@gmail.com>
 Description: A package for feature selection based on SHAP (SHapley Additive exPlanations) 
     values and statistical significance testing. Supports regression, binary classification, 
     and multiclass classification tasks. Uses iterative feature reduction to identify 

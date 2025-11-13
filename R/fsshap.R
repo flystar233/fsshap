@@ -35,7 +35,7 @@
 #' )
 #'
 #' # For feature selection, use original data frame
-#' result <- fs_shap(
+#' result <- fsshap(
 #'   model,
 #'   X_matrix,
 #'   y,
@@ -44,7 +44,7 @@
 #' print(result)
 #' }
 #'
-fs_shap <- function(model,
+fsshap <- function(model,
                         x,
                         y,
                         feature_names = NULL,

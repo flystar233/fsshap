@@ -1,4 +1,4 @@
-export(fs_shap)
+export(fsshap)
 import(fastshap)
 import(data.table)
 import(stats)
