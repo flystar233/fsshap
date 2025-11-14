@@ -12,7 +12,9 @@ fsshap(
   task = NULL,
   threshold = 0.05,
   return_extended_data = FALSE,
-  alpha = 1e-06
+  alpha = 1e-06,
+  parallel = FALSE,
+  n_cores = NULL
 )
 }
 \arguments{
@@ -31,6 +33,11 @@ fsshap(
 \item{return_extended_data}{Logical: return SHAP values as well}
 
 \item{alpha}{Numeric: regularization strength}
+
+\item{parallel}{Logical: enable parallel processing for SHAP computation (default FALSE)}
+
+\item{n_cores}{Integer: number of cores to use for parallel processing.
+If NULL, uses all available cores minus 1. Only used if parallel=TRUE.}
 }
 \value{
 Data frame (or list with SHAP values if extended) with feature statistics

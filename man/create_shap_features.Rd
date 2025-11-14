@@ -4,7 +4,7 @@
 \alias{create_shap_features}
 \title{Create SHAP Features}
 \usage{
-create_shap_features(model, x, classes = NULL)
+create_shap_features(model, x, classes = NULL, parallel = FALSE)
 }
 \arguments{
 \item{model}{Trained tree-based model (xgboost, lightgbm)}
@@ -12,6 +12,8 @@ create_shap_features(model, x, classes = NULL)
 \item{x}{Data frame with validation features}
 
 \item{classes}{Character vector of class names (for multiclass)}
+
+\item{parallel}{Logical: enable parallel processing}
 }
 \value{
 Data frame or list of data frames with SHAP values
