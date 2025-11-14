@@ -10,6 +10,9 @@
 #' @param threshold Numeric: p-value threshold for selection (default 0.05)
 #' @param return_extended_data Logical: return SHAP values as well
 #' @param alpha Numeric: regularization strength
+#' @param parallel Logical: enable parallel processing for SHAP computation (default FALSE)
+#' @param n_cores Integer: number of cores to use for parallel processing.
+#'   If NULL, uses all available cores minus 1. Only used if parallel=TRUE.
 #'
 #' @return Data frame (or list with SHAP values if extended) with feature statistics
 #'
@@ -45,13 +48,15 @@
 #' }
 #'
 fsshap <- function(model,
-                        x,
-                        y,
-                        feature_names = NULL,
-                        task = NULL,
-                        threshold = 0.05,
-                        return_extended_data = FALSE,
-                        alpha = 1e-6) {
+                   x,
+                   y,
+                   feature_names = NULL,
+                   task = NULL,
+                   threshold = 0.05,
+                   return_extended_data = FALSE,
+                   alpha = 1e-6,
+                   parallel = FALSE,
+                   n_cores = NULL) {
 
   # Convert to data.frame if needed
   if (!is.data.frame(x)) {
@@ -129,12 +134,14 @@ fsshap <- function(model,
     shap_features <- create_shap_features(
       model,
       x[, feature_names, drop = FALSE],
-      unique_classes
+      unique_classes,
+      parallel = parallel
     )
   } else {
     shap_features <- create_shap_features(
       model,
-      x[, feature_names, drop = FALSE]
+      x[, feature_names, drop = FALSE],
+      parallel = parallel
     )
   }
 
@@ -169,11 +176,16 @@ fsshap <- function(model,
 #' @param model Trained tree-based model (xgboost, lightgbm)
 #' @param x Data frame with validation features
 #' @param classes Character vector of class names (for multiclass)
+#' @param parallel Logical: enable parallel processing
 #'
 #' @return Data frame or list of data frames with SHAP values
 #' @import fastshap
 #' @keywords internal
-create_shap_features <- function(model, x, classes = NULL) {
+create_shap_features <- function(model, x, classes = NULL, parallel = FALSE) {
+  if (parallel) {
+    library(doParallel)
+    registerDoParallel(cores = 12)
+  }
   # Create prediction wrapper for XGBoost
   pred_wrapper <- function(object, newdata) {
     predict(object, newdata = as.matrix(newdata))
@@ -182,7 +194,8 @@ create_shap_features <- function(model, x, classes = NULL) {
     object = model,
     X = x,
     pred_wrapper = pred_wrapper,
-    nsim = 100
+    nsim = 100,
+    parallel = parallel
   )
 
   ndims <- length(dim(shap_values))
