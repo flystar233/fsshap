@@ -24,7 +24,7 @@ devtools::install_github("flystar233/fsshap")
 ## Usage Example
 
 ```r
-library(shapselect)
+library(fsshap)
 library(xgboost)
 
 # Prepare data
