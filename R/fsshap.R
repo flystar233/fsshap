@@ -8,6 +8,7 @@
 #' @param feature_names Character vector of feature names
 #' @param task Character: "regression", "binary", "multiclass", or NULL (auto-detect)
 #' @param threshold Numeric: p-value threshold for selection (default 0.05)
+#' @param nsim Integer: number of Monte Carlo simulations (default 100)
 #' @param return_extended_data Logical: return SHAP values as well
 #' @param alpha Numeric: regularization strength
 #' @param parallel Logical: enable parallel processing for SHAP computation (default FALSE)
@@ -48,19 +49,24 @@
 #' }
 #'
 fsshap <- function(model,
-                   x,
-                   y,
-                   feature_names = NULL,
-                   task = NULL,
-                   threshold = 0.05,
-                   return_extended_data = FALSE,
+                        x,
+                        y,
+                        feature_names = NULL,
+                        task = NULL,
+                        threshold = 0.05,
+                   nsim = 100,
+                        return_extended_data = FALSE,
                    alpha = 1e-6,
                    parallel = FALSE,
                    n_cores = NULL) {
 
-  # Convert to data.frame if needed
-  if (!is.data.frame(x)) {
-    x <- as.data.frame(x)
+  # Convert to data.table
+  if (!data.table::is.data.table(x)) {
+    if (is.data.frame(x)) {
+      x <- data.table::as.data.table(x)
+    } else {
+      x <- data.table::as.data.table(as.data.frame(x))
+    }
   }
 
   # Validate threshold
@@ -78,6 +84,12 @@ fsshap <- function(model,
   if (alpha < 0) {
     stop("alpha must be >= 0")
   }
+
+  # Validate nsim
+  if (!is.numeric(nsim) || length(nsim) != 1L || nsim <= 0) {
+    stop("nsim must be a positive integer")
+  }
+  nsim <- as.integer(nsim)
 
   # Validate return_extended_data
   if (!is.logical(return_extended_data) ||
@@ -133,14 +145,16 @@ fsshap <- function(model,
     unique_classes <- sort(unique(y))
     shap_features <- create_shap_features(
       model,
-      x[, feature_names, drop = FALSE],
+      x[, feature_names, with = FALSE],
       unique_classes,
+      nsim = nsim,
       parallel = parallel
     )
   } else {
     shap_features <- create_shap_features(
       model,
-      x[, feature_names, drop = FALSE],
+      x[, feature_names, with = FALSE],
+      nsim = nsim,
       parallel = parallel
     )
   }
@@ -176,55 +190,66 @@ fsshap <- function(model,
 #' @param model Trained tree-based model (xgboost, lightgbm)
 #' @param x Data frame with validation features
 #' @param classes Character vector of class names (for multiclass)
+#' @param nsim Integer: number of Monte Carlo simulations
 #' @param parallel Logical: enable parallel processing
 #'
 #' @return Data frame or list of data frames with SHAP values
 #' @import fastshap
 #' @keywords internal
-create_shap_features <- function(model, x, classes = NULL, parallel = FALSE) {
+create_shap_features <- function(model, x, classes = NULL, nsim = 100, parallel = FALSE) {
   if (parallel) {
     library(doParallel)
     registerDoParallel(cores = 12)
   }
-  # Create prediction wrapper for XGBoost
-  pred_wrapper <- function(object, newdata) {
-    predict(object, newdata = as.matrix(newdata))
-  }
-  shap_values <- fastshap::explain(
-    object = model,
-    X = x,
-    pred_wrapper = pred_wrapper,
-    nsim = 100,
-    parallel = parallel
-  )
 
-  ndims <- length(dim(shap_values))
-  if (ndims == 2L) {
-    if (!is.null(classes)) {
-      stop("classes must be NULL for binary/regression tasks")
-    }
+  x_mat <- as.matrix(x)
+  feature_names <- colnames(x)
 
-    result <- data.frame(
-      shap_values,
-      row.names = rownames(x),
-      check.names = FALSE
+  # Compute SHAP values
+  if (is.null(classes)) {
+    # Binary/Regression
+    shap_values <- fastshap::explain(
+      object = model,
+      X = x_mat,
+      pred_wrapper = function(object, newdata) {
+        predict(object, newdata = if (!is.matrix(newdata)) as.matrix(newdata) else newdata)
+      },
+      nsim = nsim,
+      parallel = parallel
     )
-    colnames(result) <- colnames(x)
+    
+    result <- data.table::data.table(shap_values, check.names = FALSE)
+    colnames(result) <- feature_names
     return(result)
   }
-
-  if (ndims == 3L) {
-    # Multiclass case
-    result <- lapply(seq_along(classes), function(i) {
-      data.frame(
-        shap_values[, , i],
-        row.names = rownames(x),
-        check.names = FALSE
-      )
-    })
-    names(result) <- classes
-    return(result)
-  }
+  
+  # Multiclass: compute SHAP for each class
+  n_classes <- length(classes)
+  shap_list <- lapply(seq_len(n_classes), function(i) {
+    fastshap::explain(
+      object = model,
+      X = x_mat,
+      pred_wrapper = function(object, newdata) {
+        if (!is.matrix(newdata)) newdata <- as.matrix(newdata)
+        pred <- predict(object, newdata = newdata, reshape = TRUE)
+        if (!is.matrix(pred)) {
+          pred <- matrix(pred, nrow = nrow(newdata), ncol = n_classes, byrow = TRUE)
+        }
+        pred[, i]
+      },
+      nsim = nsim,
+      parallel = parallel
+    )
+  })
+  
+  # Convert to list of data.tables
+  result <- lapply(seq_len(n_classes), function(i) {
+    dt <- data.table::data.table(shap_list[[i]], check.names = FALSE)
+    colnames(dt) <- feature_names
+    dt
+  })
+  names(result) <- classes
+  return(result)
 }
 
 #' Extract Model Statistics
@@ -237,26 +262,25 @@ create_shap_features <- function(model, x, classes = NULL, parallel = FALSE) {
 #' @return Data frame with feature statistics
 #' @keywords internal
 extract_model_stats <- function(fit, model_type = c("glm", "lm")) {
+  # Declare global variables for data.table
+  closeness_to_1 <- coefficient <- feature_name <- NULL
+
   model_type <- match.arg(model_type)
   summary_stats <- summary(fit)$coefficients
 
   p_col <- if (model_type == "glm") "Pr(>|z|)" else "Pr(>|t|)"
   t_col <- if (model_type == "glm") "z value" else "t value"
 
-  result_df <- data.frame(
+  result_df <- data.table::data.table(
     feature_name = rownames(summary_stats),
     coefficient = summary_stats[, "Estimate"],
     stderr = summary_stats[, "Std. Error"],
     stat_significance = summary_stats[, p_col],
-    t_value = summary_stats[, t_col],
-    row.names = NULL,
-    check.names = FALSE,
-    stringsAsFactors = FALSE
+    t_value = summary_stats[, t_col]
   )
 
-  result_df$closeness_to_1 <- abs(result_df$coefficient - 1.0)
-  result_df <- result_df[result_df$feature_name != "(Intercept)", ]
-  rownames(result_df) <- NULL
+  result_df[, closeness_to_1 := abs(coefficient - 1.0)]
+  result_df <- result_df[feature_name != "(Intercept)"]
 
   return(result_df)
 }
@@ -299,12 +323,19 @@ shap_features_to_significance <- function(shap_features, y, task, alpha) {
 #' @return Data frame or list with feature removed
 #' @keywords internal
 remove_feature <- function(shap_features, feature_name) {
-  if (is.data.frame(shap_features)) {
-    shap_features[, setdiff(colnames(shap_features), feature_name),
-                   drop = FALSE]
+  if (data.table::is.data.table(shap_features)) {
+    keep_cols <- setdiff(names(shap_features), feature_name)
+    return(shap_features[, keep_cols, with = FALSE])
   } else {
+    # Assume list of data.tables
     lapply(shap_features, function(df) {
+      if (data.table::is.data.table(df)) {
+        keep_cols <- setdiff(names(df), feature_name)
+        df[, keep_cols, with = FALSE]
+      } else {
+        # Fallback for regular list of data.frames
       df[, setdiff(colnames(df), feature_name), drop = FALSE]
+      }
     })
   }
 }
@@ -358,7 +389,7 @@ iterative_reduction <- function(shap_features, y, task,
 
   result_df <- data.table::rbindlist(collected_rows, fill = TRUE)
   result_df <- result_df[order(result_df$t_value, decreasing = TRUE), ]
-  rownames(result_df) <- NULL
 
-  return(as.data.frame(result_df))
+  return(result_df)
 }
+

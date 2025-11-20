@@ -11,10 +11,6 @@
 #' @return Data frame with feature statistics
 #' @keywords internal
 fit_glm <- function(shap_features, y, family, alpha) {
-  # Convert to data.frame if needed
-  if (!is.data.frame(shap_features)) {
-    shap_features <- as.data.frame(shap_features)
-  }
   if (!is.numeric(y)) {
     stop("y must be numeric")
   }
@@ -24,7 +20,8 @@ fit_glm <- function(shap_features, y, family, alpha) {
   }
 
   # Use glm for both regression and binary classification
-  fit <- glm(y ~ ., data = shap_features, family = family)
+  # Suppress warnings about perfect separation (common in feature selection)
+  fit <- suppressWarnings(glm(y ~ ., data = shap_features, family = family))
   model_type <- if (family == "gaussian") "lm" else "glm"
   return(extract_model_stats(fit, model_type))
 }
@@ -45,13 +42,6 @@ fit_multiclass <- function(shap_features, y, alpha,
                           return_individual = FALSE) {
   # Declare global variables for data.table syntax
   t_value <- closeness_to_1 <- coefficient <- stat_significance <- NULL
-
-  if (!is.list(shap_features)) {
-    stop("shap_features must be a list")
-  }
-  if (!is.logical(return_individual) || length(return_individual) != 1L) {
-    stop("return_individual must be a single logical value")
-  }
 
   significance_dfs <- lapply(names(shap_features), function(cls) {
     feature_df <- shap_features[[cls]]
@@ -85,7 +75,7 @@ fit_multiclass <- function(shap_features, y, alpha,
       individual = significance_dfs
     ))
   } else {
-    return(as.data.frame(max_significance_df))
+    return(max_significance_df)
   }
 }
 
